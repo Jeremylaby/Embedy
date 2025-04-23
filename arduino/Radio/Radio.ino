@@ -5,8 +5,8 @@
 #define UPPER_MID 520
 #define LOWER_MID 500
 
-const uint64_t pipeOut = 0xd2f0f0f0f0LL;  // Adres komunikacyjny (musi być zgodny z odbiornikiem)
-RF24 radio(7, 8); // CE, CSN piny
+const uint64_t pipeOut = 0xF0F0F0F0E1LL;  // Adres komunikacyjny (musi być zgodny z odbiornikiem)
+RF24 radio(9, 10); // CE, CSN piny
 
 struct MotorSignal {
   byte motor1;
@@ -27,10 +27,14 @@ void setup() {
     Serial.println("Błąd inicjalizacji nRF24L01!");
     while (1); // Zatrzymaj program
   }
-  radio.setChannel(46);
+
+         
+  radio.setDataRate(RF24_250KBPS); 
+  radio.openWritingPipe(pipeOut);
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.setChannel(100);
   radio.setAutoAck(false);
-  radio.openWritingPipe(pipeOut);      // Adres odbiornika
-  radio.stopListening();               // Tryb nadawania
+  radio.powerUp();    
   ResetData();
 
   Serial.println("Nadajnik uruchomiony!");
@@ -50,7 +54,7 @@ int parseValue(int val) {
 }
 
 void loop() {
-  // Odczyt z joysticka
+
   data.motor1 = parseValue(analogRead(A0)); // Joystick 1
   data.motor2 = parseValue(analogRead(A2)); // Joystick 2
 
@@ -60,8 +64,7 @@ void loop() {
   Serial.print(" ; motor2 = ");
   Serial.println(data.motor2);
 
-  // Wysyłanie danych
-  bool success = radio.write(&data, sizeof(MotorSignal));
+  bool success = radio.write(&data, sizeof(data));
 
   if (success) {
     Serial.println("Wysłano dane.");
@@ -69,10 +72,6 @@ void loop() {
     Serial.println("Błąd wysyłania!");
   }
 
-  // (Opcjonalnie) sprawdzenie połączenia z nRF
-  if (!radio.isChipConnected()) {
-    Serial.println("nRF24L01 nie wykryty!");
-  }
 
-  delay(1000); // Odstęp między wysyłaniem
+  delay(50);
 }
