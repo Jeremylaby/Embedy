@@ -63,17 +63,17 @@ def command_handler(data: str, motor_l: Motor, motor_r: Motor):
         motor_l.set_speed(speed_l)
         motor_r.set_speed(speed_r)
         # print(f"==> motor_l {speed_l} motor_r {speed_r}")
-    """Zakładamy że postać każdej komendy (params) to:
+    elif prefix == "-p":
+        """Zakładamy że postać każdej komendy (params) to:
         "speed_l speed_r time;
             ....
          sped_l speed_r time;"
 
 
-    Raises:
-        InvalidParamError: Kiedy param nie wygląda tak jak w opisie wyżej czyli nie składa się z 3 wartości
-        ten błąd jest zgłaszany
-    """
-    if prefix == "-p":
+        Raises:
+            InvalidParamError: Kiedy param nie wygląda tak jak w opisie wyżej czyli nie składa się z 3 wartości
+            ten błąd jest zgłaszany
+        """
         commands = " ".join(args).rstrip(";").split("; ")
         for command in commands:
             params = command.split(" ")

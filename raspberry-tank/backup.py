@@ -21,16 +21,17 @@ last_command_time = 0
 SAFE_TIMEOUT = 2.0
 
 def watchdog_task(motor_l, motor_r, last_command_time, timeout = SAFE_TIMEOUT):
-    while True:
-        now = time.ticks_ms()
-        elapsed = time.ticks_diff(now, last_command_time) / 1000.0
-        return False
-        if elapsed > timeout:
-            print(f"!! Watchdog: Brak komendy od {elapsed:.1f}s – zatrzymuję pojazd !!")
-            motor_l.set_speed(motor_l.MID_SPEED)
-            motor_r.set_speed(motor_r.MID_SPEED)
-            last_command_time = now
-            return True
+    now = time.ticks_ms()
+    elapsed = time.ticks_diff(now, last_command_time) / 1000.0
+    print(f"Watchdog last command: {last_command_time} now: {now} elapsed: {elapsed}")
+        
+    if elapsed > timeout:
+        print(f"!! Watchdog: Brak komendy od {elapsed:.1f}s – zatrzymuję pojazd !!")
+        motor_l.disable()
+        motor_r.disable()
+        last_command_time = now
+        return True
+    return False
 
 def led_blink(led: Pin, times: int, delta=0.2):
     for _ in range(times):
@@ -68,7 +69,7 @@ def main():
             try:
                 while True:
                     if watchdog_task(motor_l, motor_r, last_command_time):
-                        last_command_time = time.ticks_ms()
+                        break
                     try:
                         data = client_sock.recv(BUF_SIZE)
                     except OSError:
@@ -79,10 +80,11 @@ def main():
                         break
 
                     recv_buffer += data
-
-                    while b'\n' in recv_buffer:
+                    if b'\n' in recv_buffer:
                         print(recv_buffer)
-                        line, recv_buffer = recv_buffer.split(b'\n', 1)
+                        line, *recv_buffer = recv_buffer.split(b'\n')
+                        if recv_buffer[-1]:
+                            line = recv_buffer[-1]
                         line = line.strip()
                         if not line:
                             continue
@@ -93,6 +95,8 @@ def main():
                             last_command_time = time.ticks_ms()
                         except (AuthenticationError, UnknownCommandError, InvalidArgumentsError, CommandError) as e:
                             print(f"==> Command handler error {e}")
+                        recv_buffer =b""
+                    
 
             except OSError as e:
                 print("Błąd podczas komunikacji z klientem:", e)
@@ -110,7 +114,7 @@ def main():
     except Exception as e:
         print("Nieoczekiwany błąd:", e)
 
-    finally:
+    finally:	 
         #Changed
         motor_l.disable()
         motor_r.disable()
@@ -129,3 +133,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
