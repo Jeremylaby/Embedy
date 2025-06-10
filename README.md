@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
 ## Komunikacja Wi-Fi
 
-### Raspberry Pi Pico W (czołg)
+### Raspberry Pi Pico WH (czołg)
 - Tworzy własną sieć Wi-Fi (Access Point)
   
 **Parametry:**
