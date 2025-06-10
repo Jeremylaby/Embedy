@@ -1,10 +1,35 @@
-# SYTEMY WBUDOWANE 2025
+# SYSTEMY WBUDOWANE 2025
 ## Stanisław Barycki, Piotr Błaszczyk, Krzysztof Swędzioł
 
-## // TODO WSTEPNY OPIS ITP
+## Opis projektu
+
+Projekt zakłada stworzenie zdalnie sterowanego czołgu z wykorzystaniem dwóch mikrokomputerów Raspberry Pi Pico WH, komunikujących się ze sobą poprzez sieć Wi-Fi. Jeden z nich znajduje się w czołgu i działa jako Access Point oraz serwer TCP, a drugi – umieszczony w kontrolerze – łączy się jako klient TCP i przesyła komendy sterujące ruchem pojazdu.
+
+Sterowanie odbywa się poprzez joystick analogowy, a komunikacja oparta jest na socketach TCP i własnym protokole tekstowym opartym na komendach.
 
 ## CZOŁG
-### //TODO, opis czołgu, jaka beteria elemnety itp
+
+### Komponenty czołgu
+- Mikrokontroler: Raspberry Pi Pico WH
+- Zasilanie: Bateria lipo 3,7V 
+- Silniki sterujące ruchem gąsienic w podwoziu
+- Sterownik silników: Własna implementacja klasy Motor
+- Moduł komunikacyjny Wi-Fi: Pico W jako Access Point
+
+### Funkcjonalność czołgu
+- Nasłuch TCP na porcie 4343, połączenie dostępne po SSID: PICO_AP_2
+- Obsługa dwóch komend:
+  - `-d`: bezpośrednie sterowanie silnikami (speed_l, speed_r)
+  - `-p`: tryb "programowy" – zestaw komend w sekwencji z czasem trwania
+- Watchdog – zatrzymuje czołg, gdy nie otrzymano komendy w ciągu 2 sekund
+- System autoryzacji – wymagana tajna fraza (AUTHORIZED_TOKEN)
+
+### Logika opakowana w pliki:
+- `main.py` – serwer TCP i pętla główna
+- `motor.py` – klasa sterująca silnikami
+- `command_handler.py` – parser komend i wykonanie logiki
+- `wifi_receiver_ap.py` – konfiguracja trybu AP
+
 
 ![alt text](photos/image.png)
 
@@ -149,14 +174,80 @@ if __name__ == "__main__":
     main()
 ```
 
+## Komunikacja Wi-Fi
+
+### Raspberry Pi Pico W (czołg)
+- Tworzy własną sieć Wi-Fi (Access Point)
+  
+**Parametry:**
+- SSID: `PICO_AP_2`
+- Hasło: `secret_password_123`
+- Adres IP: `192.168.4.1`
+
+### Kontroler (drugi Pico)
+- Łączy się z Access Pointem czołgu
+- Odczytuje pozycje joysticka (2 osie ADC)
+- Przesyła co 0.5 sekundy aktualne komendy w formacie `-d` z tokenem autoryzacyjnym
+
+## Protokół komend
+
+Każda komenda przesyłana z kontrolera do czołgu zawiera:
+[TOKEN] [PREFIX] [ARGUMENTY]
+
+**Przykłady:**
+very_secret_key_ilusion_of_safety -d 1024 2048
+very_secret_key_ilusion_of_safety -p 1024 2048 1.0; 0 0 0.5;
+
+**Obsługiwane komendy:**
+
+| Prefix | Opis | Argumenty |
+|--------|------|-----------|
+| `-d` | Ruch bezpośredni | `speed_l speed_r` (int) |
+| `-p` | Sekwencja ruchów | `speed_l speed_r czas; ...` |
 
 ## JOYSTICK
 
 ![alt text](photos/image2.png)
 ![alt text](photos/image3.png)
+Kontroler czołgu oparty jest na dwóch potencjometrach analogowych symulujących joystick dwukierunkowy – jeden dla lewej gąsienicy, drugi dla prawej.
 
-### // TODO napiszcie tu coś, detale techiczne itp
+## Działanie systemu
+- **Dwa wejścia analogowe** (GPIO 27 i 26) odczytują wartości z potencjometrów  
+- **Konwersja odczytów** na wartości sterujące:  
+  - `0` – pełna prędkość wstecz  
+  - `1024` – zatrzymanie  
+  - `2048` – pełna prędkość do przodu  
+- **Częstotliwość wysyłania**: co 0.5 sekundy  
+- **Format polecenia**:  
+  `<SECRET_KEY> -d <SPEED_L> <SPEED_R>\n`  
 
+### Przykład polecenia
+`very_secret_key_ilusion_of_safety -d 1100 900`
+
+- **Odbiornik**: Raspberry Pi Pico (tryb AP)  
+  - Odbiera komendy przez socket TCP  
+  - Steruje silnikami zgodnie z wartościami  
+
+## Przetwarzanie wartości analogowych
+### Charakterystyka funkcji parse()
+- **Martwa strefa** (29500–36050)  
+  - Eliminuje przypadkowy ruch przy drganiu joysticka  
+  - Zwraca wartość 1024 (zatrzymanie)  
+- **Wartości graniczne**:  
+  - `> 62250` → 2048 (maks. prędkość do przodu)  
+  - `< 3275` → 0 (maks. prędkość wstecz)  
+- **Skalowanie**:  
+  - Konwersja 16-bitowego ADC (0–65535) na zakres 0–2048  
+  - Realizowane przez operację `raw // 32`  
+
+## Diagnostyka systemu
+W terminalu debugowym pojawiają się komunikaty:  
+`very_secret_key_ilusion_of_safety -d 2048 2048`  
+
+### Cel diagnostyki
+1. Weryfikacja działania joysticka  
+2. Kontrola komunikacji z czołgiem  
+3. Monitorowanie przetwarzania wartości analogowych  
 ### kod main.py joysticka
 
 ```python
@@ -323,3 +414,44 @@ if __name__ == '__main__':
         
         send_joystick_loop()
 ```
+
+# Uruchamianie systemu
+
+## Po stronie czołgu
+1. Wgrywamy pliki:
+   - `main.py`
+   - `motor.py`
+   - `command_handler.py`
+   - `wifi_receiver_ap.py`
+2. Uruchamiamy `main.py`
+3. Weryfikujemy w konsoli:
+   - Pojawienie się komunikatu `Czekam na klienta...`
+
+## Po stronie kontrolera
+1. Podłączamy joystick do pinów **ADC 26 i 27**
+2. Wgrywamy `kontroler.py`
+3. Uruchamiamy skrypt i łączymy się z siecią **PICO_AP_2**
+4. System automatycznie wysyła komendy co **0.5 sekundy**
+
+---
+
+## Bezpieczeństwo
+- Każda komenda zawiera **token autoryzacyjny**
+- Komendy z nieprawidłowym tokenem są automatycznie ignorowane
+- Mechanizm zapobiega nieautoryzowanemu sterowaniu czołgiem
+
+---
+
+## Dodatki i możliwe rozszerzenia
+### Obecne elementy
+- **Niewykorzystany czujnik ultradźwiękowy** (może służyć do wykrywania przeszkód)
+
+### Potencjalne rozszerzenia
+1. Wprowadzenie alternatywnych protokołów komunikacji:
+   - Serwer UDP
+   - Protokół MQTT
+2. **Przycisk awaryjny STOP** na kontrolerze
+3. Udoskonalenie systemu watchdog:
+   - Ręczne zatrzymanie silników
+   - Timeouty połączone z sygnalizacją LED
+   - Automatyczne bezpieczne wyłączenie przy braku komunikacji
