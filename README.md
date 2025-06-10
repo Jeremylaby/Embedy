@@ -209,6 +209,7 @@ very_secret_key_ilusion_of_safety -p 1024 2048 1.0; 0 0 0.5;
 
 ![alt text](photos/image2.png)
 ![alt text](photos/image3.png)
+
 Kontroler czołgu oparty jest na dwóch potencjometrach analogowych symulujących joystick dwukierunkowy – jeden dla lewej gąsienicy, drugi dla prawej.
 
 ## Działanie systemu
