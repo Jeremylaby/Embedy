@@ -15,21 +15,25 @@ BUF_SIZE = 1024
 AUTHORIZED_TOKEN = "very_secret_key_ilusion_of_safety"
 
 # ——— FUNKCJE ———
+1
+paths = {"path_1": [[1024, 1024, 1], [2048, 2048, 1], [1024, 2048, 2], [2048, 1024, 2]],
+         "path_2": [[1024, 1024, 1], [2048, 2048, 5], [0, 2048, 10], [0, 0, 5],[2048, 0, 10],]}
 
-paths = {"path_1": [[1024, 1024, 1], [2048, 2048, 1], [1024, 2048, 2], [2048, 1024, 2]]}
 
-
-def send_message(sock: socket.socket, path: str):
+def send_message( path: str):
     """
     Wysyła jedną linię: "-d <left> <right>"
     """
     msg = f"{AUTHORIZED_TOKEN} -p {path}\n"
     try:
+        sock = socket_init()
         print(msg)
         sock.sendall(msg.encode())
     except OSError as e:
         print("Błąd wysyłania:", e)
         raise
+    finally:
+        sock.close()
 
 
 def socket_init() -> socket.socket:
@@ -48,15 +52,15 @@ def socket_init() -> socket.socket:
         s.close()
         sys.exit(1)
 
-def send_path(path, sock):
+def send_path(path):
     params = []
     for param_values in path:
         params.append(" ".join(map(str, param_values)))
     params_str = "; ".join(params)
     params_str+=";"
-    send_message(sock, params_str)
+    send_message( params_str)
     
-def display_path(path, sock):
+def display_path(path):
     while True:
         print("Your path: ")
         for i, params in enumerate(path):
@@ -66,12 +70,11 @@ def display_path(path, sock):
         if cmd == "n":
             break
         if cmd == "y":
-            send_path(path, sock)
+            send_path(path)
             break
 
 
 def main():
-    sock = socket_init()
     try:
         while True:
             print("Wybierz numer drogi lub x aby wyjść: ")
@@ -88,14 +91,13 @@ def main():
             idx = int(cmd)
             if idx < 0 or idx >= len(paths):
                 continue
-            display_path(paths[path_keys[idx]], sock)
+            display_path(paths[path_keys[idx]])
 
     except KeyboardInterrupt:
         print("\nZakończono przez użytkownika.")
     except Exception as e:
         print("Wystąpił błąd w pętli głównej:", e)
     finally:
-        sock.close()
         print("Socket zamknięty, pygame wypięty.")
 
 
