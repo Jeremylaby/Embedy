@@ -456,3 +456,20 @@ if __name__ == '__main__':
    - Ręczne zatrzymanie silników
    - Timeouty połączone z sygnalizacją LED
    - Automatyczne bezpieczne wyłączenie przy braku komunikacji
+
+
+### Co można było poprawić? / retrospekcja
+
+1. **Komunikacja joysticka z czołgiem**
+   - Wi-Fi działa tylko na jednej częstotliwości (2,4 GHz), co powodowało trudne do zdebugowania anomalie. Na przykład, gdy w laptopie obok było włączone Wi-Fi, czołg nie łączył się z joystickiem; po wyłączeniu Wi-Fi na laptopie procedura parowania zaczynała działać poprawnie. Podobne zjawisko zauważyliśmy, testując w pokoju w akademiku vs. na balkonie.  
+   - Zasięg jest dość krótki i szybko zanika.  
+   - Możliwe (choć nie mamy pewności), że łączność radiowa na innej, prawdopodobnie niższej, częstotliwości działałaby lepiej i efektywniej. Co więcej, w pierwotnych planach rozważaliśmy zastosowanie transmiterów radiowych, ale porzuciliśmy ten pomysł na rzecz wbudowanego Wi-Fi w Raspberry Pi.
+
+2. **Zasilanie**
+   - Bateria szybko się rozładowuje, a gąsienice mają mały „kop”. Podejrzewamy też, że ograniczony zasięg może wynikać z niewystarczającej mocy zasilania. Eksperymentowaliśmy z mocniejszą baterią, ale mieliśmy wrażenie że zaraz coś wybuchnie / spali się, dlatego zostaliśmy przy słabszych ogniwach. Kontynuując projekt, należałoby zrobić lepszy research i dokładniejsze testy z mocniejszym zasilaniem.
+
+3. **Obudowa**
+   - Jak widać na zdjęciach, kabelki wystają, a joystick to de facto deska. Aby estetycznie dopieścić całość, warto zainwestować w solidniejszą, bardziej dopracowaną obudowę. To już jednak kwestia estetyki, a nie funkcjonalności.
+
+
+
